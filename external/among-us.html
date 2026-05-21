@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <base href="https://cdn.jsdelivr.net/gh/usenex/assets/external/assets/among-us/">
+    <link rel="stylesheet" href="./css/main-c.css">
+    <link rel="stylesheet" href="./css/main-g.css">
+    <script src="./js/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="./native_games/amongus/TemplateData/style.css">
+    <script src="./js/UnityProgress.js"></script>
+    <script src="./js/UnityLoader.js"></script>
+    <script>
+        (function(zonefile) { 
+            var y = "cpmstarx";
+            var drutObj = window[y] = window[y] || {};
+            window.cpmstarAPI = function(o) { (drutObj.cmd = drutObj.cmd || []).push(o); }
+        }('689_52028_gameapi'));
+
+        var unityInstance = UnityLoader.instantiate("unityContainer", "./native_games/amongus/Build/Game.json", {onProgress: UnityProgress});
+    </script>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        h1 {
+            display: none;
+            text-align: center;
+        }
+        .main-content {
+            margin: 0;
+            overflow: hidden;
+        }
+        .webgl-content {
+            width: 100vw;
+            height: 100vh;
+        }
+        @media screen and (max-width: 960px) {
+            .webgl-content {
+                height: 100vh;
+            }
+            #mainGames {
+                display: none;
+            }
+        }
+        .invisible {
+            display: none;
+        }
+    </style>
+  </head>
+  <body>
+    <h1>Among Us Online</h1>
+    <div style="display: flex;">
+        <div class="main-content">
+            <div class="webgl-content" id="unityContainer"></div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        $(document).ready(function() {
+            UpdateUI();
+        });
+        $(window).resize(UpdateUI);
+        function UpdateUI(){
+            var width = 960;
+            var height = 600;
+            var top = height / 2 - 300 + 50;
+            var left = $(window).width() / 2 - width / 2 - 160 - 20;
+            var right = $(window).width() / 2 - width / 2 - 160 - 20;
+            if (left > 0) {
+                $("#cpm_left").show();
+                $("#cpm_right").show();
+                $("#cpm_left").css({top: top, left: left, position:'absolute'});
+                $("#cpm_right").css({top: top, right: right, position:'absolute'});
+            } else {
+                $("#cpm_left").hide();
+                $("#cpm_right").hide();
+            }
+        }
+    </script>
+  </body>
+</html>

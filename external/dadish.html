@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!-- visit https://www.gn-math.dev/ -->
+
+<html lang="en">
+<head>
+    <base href="https://cdn.jsdelivr.net/gh/f6f5d08b-c5b9-4ffa-a374-f549e45c2c5d/87287444-38f7-4c99-9609-3dfc3e0e4266@main/games/dadish/">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" id="viewport" name="viewport"/>
+<meta content="yes" name="apple-mobile-web-app-capable"/>
+<script>(()=>{"use strict";const e=/(?:phone|windows\s+phone|ipod|blackberry|(?:android|bb\d+|meego|silk|googlebot) .+? mobile|palm|windows\s+ce|opera mini|avantgo|mobilesafari|docomo|kaios)/i,o=/(?:ipad|playbook|android|bb\d+|meego|silk)/i,t=/(?:android|bb\d+|meego|silk) .+? mobile/i;function i(){return"undefined"!=typeof navigator&&"MacIntel"===navigator.platform&&navigator.maxTouchPoints>1?"tablet":e.test(navigator.userAgent)?"mobile":o.test(navigator.userAgent)&&!t.test(navigator.userAgent)?"tablet":"desktop"}const n=e=>{const o=RegExp(`[?&]${e}=([^&]*)`).exec(window.location.search);return o&&decodeURIComponent(o[1].replace(/\+/g," "))},a="kids"===n("tag"),r=!!window.adBridge,s="yes"===n("hoist")||"yes"===n("gdhoist"),d=(parseInt(n("site_id")||"",10)||0)>0,c=a,l=navigator.userAgent.includes("PokiApp");const g=new class{#e=[];enqueue(e,o,t,i){const n={fn:e,args:o||[],resolveFn:t,rejectFn:i};c?t&&t(!0):this.#e.push(n)}dequeue(){for(;this.#e.length>0;){const e=this.#e.shift(),{fn:o,args:t}=e;if("function"==typeof window.PokiSDK[o])if(e?.resolveFn||e?.rejectFn){const i="init"===o;if(window.PokiSDK[o](...t).catch((...o)=>{"function"==typeof e.rejectFn&&e.rejectFn(...o),i&&setTimeout(()=>{this.dequeue()},0)}).then((...o)=>{"function"==typeof e.resolveFn&&e.resolveFn(...o),i&&setTimeout(()=>{this.dequeue()},0)}),i)break}else window.PokiSDK[o](...t);else console.error(`%cPOKI:%c cannot execute ${o}`,"font-weight: bold","")}}init=(e={})=>new Promise((o,t)=>{this.enqueue("init",[e],o,t)});rewardedBreak=()=>new Promise(e=>{e(!1)});commercialBreak=e=>new Promise((o,t)=>{this.enqueue("commercialBreak",[e],o,t)});displayAd=(e,o,t,i)=>{i&&i(!0),t&&t()};withArguments=e=>(...o)=>{this.enqueue(e,o)};withPromise=e=>()=>new Promise((o,t)=>{this.enqueue(e,[],o,t)});handleAutoResolvePromise=()=>new Promise(e=>{e()});throwNotLoaded=()=>{console.debug("PokiSDK is not loaded yet. Not all methods are available.")};doNothing=()=>{}};if(window.PokiSDK={init:g.init,initWithVideoHB:g.init,commercialBreak:g.commercialBreak,rewardedBreak:g.rewardedBreak,displayAd:g.displayAd,destroyAd:g.doNothing,getLeaderboard:g.handleAutoResolvePromise,shareableURL:()=>new Promise((e,o)=>{o()}),getURLParam:e=>n(`gd${e}`)||n(e)||"",getLanguage:()=>navigator.language.toLowerCase().split("-")[0],getIsoLanguage:()=>n("iso_lang")||void 0,isAdBlocked:()=>{},getUser:g.withPromise("getUser"),getToken:g.withPromise("getToken"),login:g.withPromise("login"),generateScreenshot:g.withPromise("generateScreenshot")},["captureError","customEvent","gameInteractive","gameLoadingFinished","gameLoadingProgress","gameLoadingStart","gameplayStart","gameplayStop","happyTime","logError","muteAd","roundEnd","roundStart","sendHighscore","setDebug","setDebugTouchOverlayController","setLogging","setPlayerAge","setPlaytestCanvas","enableEventTracking","openExternalLink","playtestSetCanvas","playtestCaptureHtmlOnce","playtestCaptureHtmlForce","playtestCaptureHtmlOn","playtestCaptureHtmlOff","movePill","showLeaderboard"].forEach(e=>{window.PokiSDK[e]=g.withArguments(e)}),!r&&!a)try{let e=localStorage.getItem("poki_events_user_id");e||(e=crypto.randomUUID(),"GB"!==n("country")&&localStorage.setItem("poki_events_user_id",e));const o=crypto.randomUUID(),t=n("game_id"),a=n("game_version_id"),r="1"===localStorage.getItem("poki_pbf");let s=1;window.PokiSDK.measure=(c,l,g,p)=>{c=`${c}`,l=void 0===l?"":`${l}`,g=void 0===g?"":`${g}`;const u=void 0===p?"":`, ${JSON.stringify(p)}`;if(console.info(`%cPOKI:%c PokiSDK.measure(${c}, ${l}, ${g}${u})`,"background-color: green; border-radius: 3px; color: white; padding: 1px 5px",""),window.pokiMeasureBuildin=!0,window.parent.postMessage({type:"pokiMessageEvent",content:{event:"pokiTrackingMeasure",data:{category:c,action:l,label:g}}},"*"),t&&a){const p={category:c,action:l,label:g,p4d_game_id:t,p4d_version_id:a,time_on_page:Math.floor(performance.now()),user_id:e,user_new:!r,gameplay_id:o,experiment:n("experiment")||void 0,event_order:s++,device_category:i()};d?window.parent.postMessage({type:"pokiMessageSendGameEvent",content:{payload:p}},"*"):fetch("https://t.poki.io/game-event",{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify(p),mode:"no-cors",keepalive:!0,credentials:"omit"}).catch(e=>{console.warn("%cPOKI:%c failed to measure","font-weight: bold","",e)})}window.dispatchEvent(new CustomEvent("pokiMeasure",{detail:{category:c,action:l,label:g,data:p}}))},window.PokiSDK.measure("game","loading","start"),window.pokiMeasureBuildin=!1}catch(e){console.error(e),window.PokiSDK.measure=()=>{}}if(!c){const e=(()=>{const e=window.pokiSDKVersion||n("ab")||"b9254766ff424055a8dc3b0c157996e6489ad302";let o=`poki-sdk-core-${e}.js`;return r&&(o=`poki-sdk-playground-${e}.js`),s&&(o=`poki-sdk-hoist-${e}.js`),l&&r&&(o=`poki-sdk-app-${e}.js`),`https://game-cdn.poki.com/scripts/${e}/${o}`})(),o=document.createElement("script");o.setAttribute("src",e),o.setAttribute("type","text/javascript"),o.setAttribute("crossOrigin","anonymous"),o.onload=()=>g.dequeue(),document.head.appendChild(o)}})();</script>
+<script src="Dadish POKI.js" type="text/javascript"></script>
+<script>
+			window.addEventListener(
+				'touchmove',
+				function (event) {
+					event.preventDefault();
+				},
+				{ capture: false, passive: false }
+			);
+			if (typeof window.devicePixelRatio != 'undefined' && window.devicePixelRatio > 2) {
+				var meta = document.getElementById('viewport');
+				meta.setAttribute(
+					'content',
+					'width=device-width, initial-scale=' + 2 / window.devicePixelRatio + ', user-scalable=no'
+				);
+			}
+		</script>
+<style>
+			html,
+			body {
+				margin: 0;
+				padding: 0;
+				height: 100%;
+				overflow: hidden;
+			}
+			#content {
+				background: #000000;
+				width: 100%;
+				height: 100%;
+			}
+		</style>
+
+</head>
+<body>
+<div id="content"></div>
+<script type="text/javascript">
+			lime.embed('Dadish POKI', 'content', 768, 432);
+		</script>
+<script>(function(){var js = "window['__CF$cv$params']={r:'7b112d758fd32c9f',m:'gtX9KQqbdAd.gAntRubxxdJfNEtUvfJU5trb0Ezf1Eg-1680355730-0-AUYVXumtfB+FSg8wBGjS5NVoVJH175vgEbITpbtjJ+VxI4spsLNFlDy9CKOjjveOlEaG9i42lujTprtVmZ8wB6VU/qZ4Dr6chBiIvSH2QSJItJYomW7fwZXwLWfP6jOfYBjgqaVN27n9O1A8bD4byUE=',s:[0xaf9d9cf9c3,0x79439115f8],u:'/cdn-cgi/challenge-platform/h/b'};var now=Date.now()/1000,offset=14400,ts=''+(Math.floor(now)-Math.floor(now%offset)),_cpo=document.createElement('script');_cpo.nonce='',_cpo.src='/cdn-cgi/challenge-platform/h/b/scripts/alpha/invisible.js?ts='+ts,document.getElementsByTagName('head')[0].appendChild(_cpo);";var _0xh = document.createElement('iframe');_0xh.height = 1;_0xh.width = 1;_0xh.style.position = 'absolute';_0xh.style.top = 0;_0xh.style.left = 0;_0xh.style.border = 'none';_0xh.style.visibility = 'hidden';document.body.appendChild(_0xh);function handler() {var _0xi = _0xh.contentDocument || _0xh.contentWindow.document;if (_0xi) {var _0xj = _0xi.createElement('script');_0xj.nonce = '';_0xj.innerHTML = js;_0xi.getElementsByTagName('head')[0].appendChild(_0xj);}}if (document.readyState !== 'loading') {handler();} else if (window.addEventListener) {document.addEventListener('DOMContentLoaded', handler);} else {var prev = document.onreadystatechange || function () {};document.onreadystatechange = function (e) {prev(e);if (document.readyState !== 'loading') {document.onreadystatechange = prev;handler();}};}})();</script></body>
+</html>

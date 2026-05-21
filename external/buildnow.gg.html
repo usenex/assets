@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <base href="https://cdn.jsdelivr.net/gh/f6f5d08b-c5b9-4ffa-a374-f549e45c2c5d/fc47a779-b017-4869-9221-223c18ae1174/buildnow-gg/">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <style>
+    body, html {
+      margin: 0 !important;
+      padding: 0 !important;
+      background-color: #0b0b0e !important;
+      overflow: hidden !important;
+      width: 100%;
+      height: 100%;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    #loading-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, #1a1a24 0%, #08080c 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    .loading-container {
+      width: 320px;
+      text-align: center;
+    }
+    .game-title {
+      color: #ffffff;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    }
+    .loading-status {
+      color: #8a8a98;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+    }
+    .progress-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+    }
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #ff416c, #ff4b2b);
+      box-shadow: 0 0 15px #ff4b2b;
+      border-radius: 10px;
+      transition: width 0.3s ease-out;
+    }
+    #unity-canvas {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      outline: none;
+      background: #000;
+    }
+  </style>
+</head>
+<body class="noselect">
+
+  <div id="loading-screen">
+    <div class="loading-container">
+      <div class="game-title">BuildNow GG</div>
+      <div class="loading-status" id="loading-text">Connecting... 0%</div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="unity-canvas"></canvas>
+
+  <script>
+    const SPLIT_MAP = {
+      "7db022abd161455e3cc5f207e75d294b.wasm": null, 
+      "ab8dd356a41a2943639294657a0990f8.data": null
+    };
+
+    async function mergeParts(baseUrl) {
+      const parts = [];
+      for (let i = 1; i <= 99; i++) {
+        const testUrl = baseUrl + ".part" + i;
+        try {
+          const head = await fetch(testUrl, { method: "HEAD" });
+          if (!head.ok) break;
+          parts.push(testUrl);
+        } catch { break; }
+      }
+      if (parts.length === 0) return baseUrl;
+      const buffers = await Promise.all(parts.map(async (u) => {
+        const r = await fetch(u);
+        return new Uint8Array(await r.arrayBuffer());
+      }));
+      const total = buffers.reduce((a, b) => a + b.length, 0);
+      const merged = new Uint8Array(total);
+      let offset = 0;
+      for (const b of buffers) { merged.set(b, offset); offset += b.length; }
+      return URL.createObjectURL(new Blob([merged]));
+    }
+
+    async function preMergeAll() {
+      const map = {};
+      const files = Object.entries(SPLIT_MAP);
+      const total = files.length;
+      let done = 0;
+      const loadingText = document.getElementById("loading-text");
+      const progressFill = document.getElementById("progress-fill");
+
+      for (const [file, _] of files) {
+        const merged = await mergeParts("Build/" + file);
+        map[file] = merged;
+        done++;
+        const percentage = Math.floor((done / total) * 100);
+        loadingText.innerText = `Loading Assets... ${percentage}%`;
+        progressFill.style.width = `${percentage}%`;
+      }
+      
+      loadingText.innerText = "Starting Game...";
+      return map;
+    }
+
+    (async () => {
+      const mergedMap = await preMergeAll();
+      const origFetch = window.fetch;
+      
+      window.fetch = async function(resource, options) {
+        if (typeof resource === "string") {
+          const key = resource.split("/").pop();
+          if (mergedMap[key]) return origFetch(mergedMap[key], options);
+        }
+        return origFetch(resource, options);
+      };
+
+      const canvas = document.querySelector("#unity-canvas");
+      
+      canvas.addEventListener("mousedown", () => {
+        canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
+        canvas.requestPointerLock();
+      });
+
+      const loaderUrl = "Build/7a2dbded24d57e056180125b1583e7c4.loader.js";
+      const config = {
+        dataUrl: "Build/ab8dd356a41a2943639294657a0990f8.data",
+        frameworkUrl: "Build/91a2bfcec140bc524100478b99a4f6d7.framework.js",
+        codeUrl: "Build/7db022abd161455e3cc5f207e75d294b.wasm",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "BuildNow GG",
+        productName: "BuildNow GG",
+        productVersion: "1.0.0"
+      };
+
+      const script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          const loadingText = document.getElementById("loading-text");
+          const progressFill = document.getElementById("progress-fill");
+          const percentage = Math.floor(progress * 100);
+          loadingText.innerText = `Launching... ${percentage}%`;
+          progressFill.style.width = `${percentage}%`;
+        }).then((unityInstance) => {
+          window.gameInstance = unityInstance;
+          document.getElementById("loading-screen").style.display = "none";
+        });
+      };
+      document.body.appendChild(script);
+    })();
+
+    function resizeCanvas() {
+      const canvas = document.getElementById("unity-canvas");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+  </script>
+</body>
+</html>
