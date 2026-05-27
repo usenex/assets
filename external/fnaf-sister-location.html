@@ -32,7 +32,7 @@
             background:#fff;
             box-shadow:0 0 4px #fff;
             transition:width 0.08s cubic-bezier(0.2, 0.9, 0.4, 1.1);
-        }
+        } 
         
         #overlay{
             position:fixed;
@@ -106,6 +106,7 @@
             const RUNTIME = "resources/Five Night's at Freddys Sister Location.cch";
             const PARTS = 40;
             const PART_URLS = Array.from({length: PARTS}, (_,i) => `resources.zip.part${i+1}`);
+            const CACHE_NAME = 'fnaf-sl-cache-v1';
             
             const loaderBar = document.getElementById('slim-loader-bar');
             const overlay = document.getElementById('overlay');
@@ -113,6 +114,7 @@
             const resourceCache = new Map();
             let started = false;
             let currentProgress = 0;
+            let cacheAvailable = false;
             
             const setProgress = (percent) => {
                 if(percent < currentProgress) return;
@@ -136,11 +138,46 @@
                 else setTimeout(r, 1);
             });
             
+            const initCache = async () => {
+                if(!('caches' in window)) return false;
+                try {
+                    const cache = await caches.open(CACHE_NAME);
+                    cacheAvailable = true;
+                    return cache;
+                } catch {
+                    return false;
+                }
+            };
+            
+            const getCachedResponse = async (url) => {
+                if(!cacheAvailable) return null;
+                try {
+                    const cache = await caches.open(CACHE_NAME);
+                    return await cache.match(url);
+                } catch {
+                    return null;
+                }
+            };
+            
+            const cacheResponse = async (url, response) => {
+                if(!cacheAvailable) return;
+                try {
+                    const cache = await caches.open(CACHE_NAME);
+                    await cache.put(url, response.clone());
+                } catch {}
+            };
+            
             const getTotalSize = async (urls) => {
                 const sizes = await Promise.all(urls.map(async url => {
                     try {
-                        const res = await fetch(url, { method: 'HEAD', cache: 'force-cache' });
-                        return parseInt(res.headers.get('Content-Length') || '0', 10);
+                        const cached = await getCachedResponse(url);
+                        if(cached) {
+                            const blob = await cached.blob();
+                            return blob.size;
+                        }
+                        const res = await fetch(url, { method: 'HEAD', cache: 'no-cache' });
+                        const size = parseInt(res.headers.get('Content-Length') || '0', 10);
+                        return size;
                     } catch { return 0; }
                 }));
                 return sizes.reduce((a,b) => a + b, 0);
@@ -148,24 +185,43 @@
             
             const mergeParts = async (urls, onProgress) => {
                 const total = await getTotalSize(urls);
-                if(total === 0) throw new Error('Size error');
+                if(total === 0) throw new Error('Size calculation failed');
                 
                 let loaded = 0;
                 const chunks = [];
                 
                 for(let i = 0; i < urls.length; i++) {
-                    const res = await fetch(urls[i], { cache: 'force-cache' });
-                    const reader = res.body.getReader();
-                    while(true) {
-                        const {done, value} = await reader.read();
-                        if(done) break;
-                        chunks.push(value);
-                        loaded += value.length;
+                    let response;
+                    const cached = await getCachedResponse(urls[i]);
+                    
+                    if(cached) {
+                        response = cached;
+                        const blob = await cached.blob();
+                        chunks.push(blob);
+                        loaded += blob.size;
                         onProgress((loaded / total) * 60);
-                        if(chunks.length % 80 === 0) await yieldMain();
+                    } else {
+                        response = await fetch(urls[i], { cache: 'no-cache' });
+                        await cacheResponse(urls[i], response);
+                        
+                        const reader = response.body.getReader();
+                        const partChunks = [];
+                        
+                        while(true) {
+                            const {done, value} = await reader.read();
+                            if(done) break;
+                            partChunks.push(value);
+                            loaded += value.length;
+                            onProgress((loaded / total) * 60);
+                            if(partChunks.length % 80 === 0) await yieldMain();
+                        }
+                        
+                        chunks.push(new Blob(partChunks));
                     }
+                    
                     await yieldMain();
                 }
+                
                 return new Blob(chunks);
             };
             
@@ -176,19 +232,42 @@
                 
                 const BATCH = 4;
                 const remainingPercent = 40;
+                let extracted = 0;
                 
                 for(let i = 0; i < total; i += BATCH) {
                     const batch = files.slice(i, i + BATCH);
                     
                     for(const name of batch) {
+                        const cached = resourceCache.get(name);
+                        if(cached) {
+                            extracted++;
+                            continue;
+                        }
+                        
                         const data = await zip.files[name].async('blob');
-                        resourceCache.set(name, URL.createObjectURL(data));
+                        const blobUrl = URL.createObjectURL(data);
+                        resourceCache.set(name, blobUrl);
+                        
+                        const cacheKey = `resources/${name}`;
+                        const cachedResponse = await getCachedResponse(cacheKey);
+                        if(!cachedResponse && cacheAvailable) {
+                            try {
+                                const cache = await caches.open(CACHE_NAME);
+                                const response = new Response(data, {
+                                    headers: { 'Content-Type': 'application/octet-stream' }
+                                });
+                                await cache.put(cacheKey, response);
+                            } catch {}
+                        }
+                        
+                        extracted++;
+                        const extractProgress = (extracted / total) * remainingPercent;
+                        setProgress(startPercent + extractProgress);
                     }
                     
-                    const extractProgress = ((i + batch.length) / total) * remainingPercent;
-                    setProgress(startPercent + extractProgress);
                     await yieldMain();
                 }
+                
                 return true;
             };
             
@@ -197,8 +276,14 @@
                 window.fetch = async (input, init) => {
                     if(typeof input === 'string' && input.startsWith('resources/')) {
                         const name = input.split('/').pop();
-                        const cached = resourceCache.get(name);
-                        if(cached) return origFetch(cached, init);
+                        
+                        const cachedBlob = resourceCache.get(name);
+                        if(cachedBlob) return origFetch(cachedBlob, init);
+                        
+                        if(cacheAvailable) {
+                            const cached = await getCachedResponse(input);
+                            if(cached) return cached;
+                        }
                     }
                     return origFetch(input, init);
                 };
@@ -249,30 +334,59 @@
             
             const main = async () => {
                 setProgress(0);
+                await initCache();
                 
                 try {
-                    const hasParts = await fetch(PART_URLS[0], { method: 'HEAD' }).catch(() => null);
+                    const hasParts = await fetch(PART_URLS[0], { method: 'HEAD', cache: 'no-cache' }).catch(() => null);
                     let zipBlob;
                     
                     if(hasParts?.ok) {
                         zipBlob = await mergeParts(PART_URLS, (p) => setProgress(p));
                         setProgress(60);
                     } else {
-                        const res = await fetch('resources.zip');
-                        const total = parseInt(res.headers.get('Content-Length') || '0', 10);
-                        let loaded = 0;
-                        const chunks = [];
-                        const reader = res.body.getReader();
-                        while(true) {
-                            const {done, value} = await reader.read();
-                            if(done) break;
-                            chunks.push(value);
-                            loaded += value.length;
-                            setProgress((loaded / total) * 60);
-                            if(chunks.length % 60 === 0) await yieldMain();
+                        const cachedZip = await getCachedResponse('resources.zip');
+                        let response;
+                        
+                        if(cachedZip) {
+                            response = cachedZip;
+                            const blob = await cachedZip.blob();
+                            const total = blob.size;
+                            let loaded = 0;
+                            const reader = blob.stream().getReader();
+                            const chunks = [];
+                            
+                            while(true) {
+                                const {done, value} = await reader.read();
+                                if(done) break;
+                                chunks.push(value);
+                                loaded += value.length;
+                                setProgress((loaded / total) * 60);
+                                if(chunks.length % 60 === 0) await yieldMain();
+                            }
+                            zipBlob = new Blob(chunks);
+                        } else {
+                            response = await fetch('resources.zip', { cache: 'no-cache' });
+                            await cacheResponse('resources.zip', response);
+                            
+                            const total = parseInt(response.headers.get('Content-Length') || '0', 10);
+                            let loaded = 0;
+                            const chunks = [];
+                            const reader = response.body.getReader();
+                            
+                            while(true) {
+                                const {done, value} = await reader.read();
+                                if(done) break;
+                                chunks.push(value);
+                                loaded += value.length;
+                                if(total > 0) {
+                                    setProgress((loaded / total) * 60);
+                                }
+                                if(chunks.length % 60 === 0) await yieldMain();
+                            }
+                            zipBlob = new Blob(chunks);
                         }
-                        zipBlob = new Blob(chunks);
-                        setProgress(60);
+                        
+                        setProgress(60); 
                     }
                     
                     await extractZip(zipBlob, 60);
